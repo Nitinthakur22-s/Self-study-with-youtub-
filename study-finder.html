@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Shelf — find the video that actually explains it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F4;
+    --card:#FFFFFF;
+    --ink:#182335;
+    --ink-soft:#4B5872;
+    --navy:#20304F;
+    --line:#CBD3DE;
+    --highlight:#FFC94D;
+    --highlight-ink:#4A3300;
+    --teal:#2F6F6D;
+    --coral:#D9532A;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+  }
+  h1,h2,h3{
+    font-family:'Source Serif 4', serif;
+    color:var(--navy);
+    margin:0;
+  }
+  a{color:inherit;}
+
+  /* ---------- layout shell ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    max-width:1180px;
+    margin:0 auto;
+    min-height:100vh;
+  }
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr;}
+  }
+
+  /* ---------- side rail ---------- */
+  .rail{
+    padding:32px 20px 32px 28px;
+    border-right:1px solid var(--line);
+    position:sticky;
+    top:0;
+    align-self:start;
+    height:100vh;
+    overflow-y:auto;
+  }
+  @media (max-width:860px){
+    .rail{
+      position:static;
+      height:auto;
+      border-right:none;
+      border-bottom:1px solid var(--line);
+      padding:20px;
+    }
+  }
+  .rail-mark{
+    font-family:'Source Serif 4', serif;
+    font-weight:700;
+    font-size:1.3rem;
+    color:var(--navy);
+    margin-bottom:4px;
+  }
+  .rail-mark span{color:var(--coral);}
+  .rail-sub{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    margin-bottom:28px;
+  }
+  .rail nav{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  @media (max-width:860px){
+    .rail nav{
+      flex-direction:row;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+  }
+  .rail-link{
+    text-decoration:none;
+    color:var(--ink-soft);
+    font-size:0.93rem;
+    padding:8px 10px;
+    border-radius:3px;
+    border-left:2px solid transparent;
+    transition:border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  @media (max-width:860px){
+    .rail-link{
+      border-left:none;
+      border:1px solid var(--line);
+      background:var(--card);
+    }
+  }
+  .rail-link:hover{
+    color:var(--navy);
+    border-left-color:var(--teal);
+    background:rgba(47,111,109,0.06);
+  }
+  .rail-foot{
+    margin-top:36px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+    font-size:0.78rem;
+    color:var(--ink-soft);
+  }
+
+  /* ---------- main column ---------- */
+  main{padding:44px 40px 80px;}
+  @media (max-width:860px){main{padding:32px 20px 60px;}}
+
+  .hero{max-width:640px; margin-bottom:34px;}
+  .hero h1{
+    font-size:2.3rem;
+    line-height:1.18;
+    font-weight:600;
+  }
+  .hero h1 em{
+    font-style:normal;
+    background-image:linear-gradient(to top, var(--highlight) 38%, transparent 38%);
+    padding:0 2px;
+  }
+  .hero p{
+    color:var(--ink-soft);
+    font-size:1.02rem;
+    max-width:52ch;
+    margin-top:14px;
+  }
+
+  /* ---------- search & filters ---------- */
+  .finder{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:16px 18px;
+    margin-bottom:40px;
+  }
+  .finder-row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .finder-row input[type="text"]{
+    flex:1;
+    font:inherit;
+    font-size:0.98rem;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .finder-row input[type="text"]:focus{
+    outline:2px solid var(--teal);
+    outline-offset:1px;
+  }
+  .finder-count{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    white-space:nowrap;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:14px;
+  }
+  .chip{
+    font-size:0.82rem;
+    padding:6px 12px;
+    border-radius:14px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-family:'IBM Plex Sans', sans-serif;
+  }
+  .chip.active{
+    background:var(--navy);
+    border-color:var(--navy);
+    color:#fff;
+  }
+
+  /* ---------- category sections ---------- */
+  .category{
+    margin-bottom:46px;
+    scroll-margin-top:20px;
+  }
+  .category-head{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:8px;
+    margin-bottom:18px;
+  }
+  .category-head h2{font-size:1.28rem; font-weight:600;}
+  .category-head .tag-line{color:var(--ink-soft); font-size:0.88rem;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));
+    gap:16px;
+  }
+
+  /* index card */
+  .pick{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:16px 16px 14px;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    transition:box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .pick:hover{
+    box-shadow:0 3px 0 var(--navy);
+    transform:translateY(-2px);
+  }
+  .pick.editor::before{
+    content:"editor's pick";
+    position:absolute;
+    top:-9px;
+    left:14px;
+    background:var(--coral);
+    color:#fff;
+    font-size:0.68rem;
+    padding:2px 8px;
+    border-radius:10px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .pick-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .pick-channel{
+    font-weight:600;
+    font-size:1.0rem;
+    color:var(--navy);
+  }
+  .pick-level{
+    font-size:0.7rem;
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--teal);
+    border:1px solid var(--teal);
+    border-radius:10px;
+    padding:2px 8px;
+    white-space:nowrap;
+  }
+  .pick-title{
+    font-size:0.92rem;
+    color:var(--ink);
+    font-weight:500;
+  }
+  .pick-why{
+    font-size:0.86rem;
+    color:var(--ink-soft);
+    flex:1;
+  }
+  .pick-tags{
+    font-size:0.76rem;
+    color:var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .pick-link{
+    margin-top:6px;
+    display:inline-block;
+    font-size:0.86rem;
+    font-weight:600;
+    color:var(--teal);
+    text-decoration:none;
+    border-bottom:1px solid var(--teal);
+    width:fit-content;
+  }
+  .pick-link:hover{color:var(--coral); border-color:var(--coral);}
+
+  .empty-state{
+    display:none;
+    text-align:center;
+    padding:50px 20px;
+    color:var(--ink-soft);
+  }
+  .empty-state h3{color:var(--navy); margin-bottom:8px;}
+
+  footer{
+    max-width:640px;
+    color:var(--ink-soft);
+    font-size:0.82rem;
+    border-top:1px solid var(--line);
+    padding-top:18px;
+    margin-top:20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="rail">
+    <div class="rail-mark">study<span>shelf</span></div>
+    <div class="rail-sub">a shortlist, not a search engine</div>
+    <nav id="railNav">
+      <a class="rail-link" href="#programming">Programming & DSA</a>
+      <a class="rail-link" href="#core-cs">Core CS (OS · DBMS · CN)</a>
+      <a class="rail-link" href="#maths">Mathematics</a>
+      <a class="rail-link" href="#science">Science & General</a>
+      <a class="rail-link" href="#exam">Exam Crash Courses</a>
+      <a class="rail-link" href="#skills">Communication & Career</a>
+    </nav>
+    <div class="rail-foot">Every entry below is a real channel or course, picked for how clearly it explains things — not for view count.</div>
+  </aside>
+
+  <main>
+    <div class="hero">
+      <h1>Find the video that <em>actually</em> explains it.</h1>
+      <p>YouTube has a good explanation for almost everything you're studying — buried under a thousand mediocre ones. This is a shortlist, sorted by subject, of the channels and courses that consistently get it right.</p>
+    </div>
+
+    <div class="finder">
+      <div class="finder-row">
+        <input type="text" id="searchBox" placeholder="Search a topic, channel, or subject — e.g. 'pointers', 'calculus', 'DBMS'">
+        <span class="finder-count" id="resultCount"></span>
+      </div>
+      <div class="chip-row" id="levelChips">
+        <button class="chip active" data-level="all">All levels</button>
+        <button class="chip" data-level="Beginner">Beginner</button>
+        <button class="chip" data-level="Intermediate">Intermediate</button>
+        <button class="chip" data-level="Advanced">Advanced</button>
+      </div>
+    </div>
+
+    <div id="results">
+
+      <section class="category" id="programming" data-name="Programming & DSA">
+        <div class="category-head">
+          <h2>Programming & DSA</h2>
+          <span class="tag-line">write code, then understand why it works</span>
+        </div>
+        <div class="grid">
+
+          <article class="pick editor" data-level="Beginner" data-text="cs50 harvard programming fundamentals c python beginner">
+            <div class="pick-top"><span class="pick-channel">CS50 (Harvard)</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">CS50: Introduction to Computer Science</div>
+            <div class="pick-why">Starts from zero and builds real intuition for how computers work before it teaches syntax. The single best first course if you're unsure where to begin.</div>
+            <div class="pick-tags">#fundamentals #C #python #problem-solving</div>
+            <a class="pick-link" href="https://www.youtube.com/@cs50" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Beginner" data-text="codewithharry hindi programming web development beginner india">
+            <div class="pick-top"><span class="pick-channel">CodeWithHarry</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">Full-course playlists in Hindi/English mix</div>
+            <div class="pick-why">Slow, patient pacing with every line typed out live. Good for a first pass through a new language before you go faster elsewhere.</div>
+            <div class="pick-tags">#python #java #web-dev #hindi</div>
+            <a class="pick-link" href="https://www.youtube.com/@CodeWithHarry" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick editor" data-level="Intermediate" data-text="freecodecamp full courses certification project based">
+            <div class="pick-top"><span class="pick-channel">freeCodeCamp.org</span><span class="pick-level">Intermediate</span></div>
+            <div class="pick-title">Full-length, project-based courses</div>
+            <div class="pick-why">Long single videos that take you from concept to a finished project, so you see how the pieces actually fit together instead of isolated tips.</div>
+            <div class="pick-tags">#full-courses #projects #certifications</div>
+            <a class="pick-link" href="https://www.youtube.com/@freecodecamp" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Intermediate" data-text="telusko java spring dsa placement">
+            <div class="pick-top"><span class="pick-channel">Telusko</span><span class="pick-level">Intermediate</span></div>
+            <div class="pick-title">Java, Spring, and core OOP concepts</div>
+            <div class="pick-why">Explains the "why" behind object-oriented design decisions, not just the keywords — useful once you're past your first language.</div>
+            <div class="pick-tags">#java #oop #spring</div>
+            <a class="pick-link" href="https://www.youtube.com/@Telusko" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick editor" data-level="Intermediate" data-text="apna college dsa placement interview striver take u forward">
+            <div class="pick-top"><span class="pick-channel">Apna College</span><span class="pick-level">Intermediate</span></div>
+            <div class="pick-title">DSA + placement-prep playlists</div>
+            <div class="pick-why">Structured like a syllabus — arrays through graphs — with the kind of interview framing that's genuinely useful for semester exams too.</div>
+            <div class="pick-tags">#DSA #interview-prep #java #C++</div>
+            <a class="pick-link" href="https://www.youtube.com/@ApnaCollegeOfficial" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Advanced" data-text="fireship quick concepts new tech overview short">
+            <div class="pick-top"><span class="pick-channel">Fireship</span><span class="pick-level">Advanced</span></div>
+            <div class="pick-title">100-second and deep-dive tech explainers</div>
+            <div class="pick-why">Best used once you already know the basics and want the mental model for a new tool or concept fast, without the full course.</div>
+            <div class="pick-tags">#concepts #frameworks #quick-review</div>
+            <a class="pick-link" href="https://www.youtube.com/@Fireship" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="category" id="core-cs" data-name="Core CS">
+        <div class="category-head">
+          <h2>Core CS — OS, DBMS, Networks</h2>
+          <span class="tag-line">the theory subjects everyone struggles to visualize</span>
+        </div>
+        <div class="grid">
+
+          <article class="pick editor" data-level="Beginner" data-text="gate smashers dbms os computer networks hindi diagrams exam">
+            <div class="pick-top"><span class="pick-channel">Gate Smashers</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">DBMS, OS, and Computer Networks playlists</div>
+            <div class="pick-why">Whiteboard-style diagrams for exactly the topics that are hard to picture from a textbook — normalization, deadlocks, the OSI model.</div>
+            <div class="pick-tags">#DBMS #OS #computer-networks #exam-focused</div>
+            <a class="pick-link" href="https://www.youtube.com/@GateSmashers" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick editor" data-level="Beginner" data-text="neso academy os dbms networks digital logic clear step by step">
+            <div class="pick-top"><span class="pick-channel">Neso Academy</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">Step-by-step core CS series</div>
+            <div class="pick-why">Slower and more methodical than most — good when a topic isn't clicking anywhere else and you need it broken down further.</div>
+            <div class="pick-tags">#DBMS #OS #digital-logic #TOC</div>
+            <a class="pick-link" href="https://www.youtube.com/@nesoacademy" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Intermediate" data-text="nptel iit lectures computer science formal rigorous">
+            <div class="pick-top"><span class="pick-channel">NPTEL</span><span class="pick-level">Intermediate</span></div>
+            <div class="pick-title">Full IIT/IISc lecture courses</div>
+            <div class="pick-why">More formal and slower-paced than YouTuber content, but this is where to go once you want the rigorous version, not just the summary.</div>
+            <div class="pick-tags">#IIT #lectures #rigorous #university-level</div>
+            <a class="pick-link" href="https://www.youtube.com/@nptelhrd" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Advanced" data-text="mit opencourseware operating systems algorithms university">
+            <div class="pick-top"><span class="pick-channel">MIT OpenCourseWare</span><span class="pick-level">Advanced</span></div>
+            <div class="pick-title">Full MIT lecture recordings</div>
+            <div class="pick-why">The real classroom lectures, not a YouTuber's summary of them — best once you already have the fundamentals and want depth.</div>
+            <div class="pick-tags">#algorithms #systems #university</div>
+            <a class="pick-link" href="https://www.youtube.com/@mitocw" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="category" id="maths" data-name="Mathematics">
+        <div class="category-head">
+          <h2>Mathematics</h2>
+          <span class="tag-line">for when the formula makes no sense until you see it move</span>
+        </div>
+        <div class="grid">
+
+          <article class="pick editor" data-level="Intermediate" data-text="3blue1brown linear algebra calculus visual intuition animation">
+            <div class="pick-top"><span class="pick-channel">3Blue1Brown</span><span class="pick-level">Intermediate</span></div>
+            <div class="pick-title">Essence of Linear Algebra / Calculus</div>
+            <div class="pick-why">Animated, geometric explanations that make abstract topics feel obvious in hindsight. Watch this before you memorize a single formula.</div>
+            <div class="pick-tags">#linear-algebra #calculus #visual-intuition</div>
+            <a class="pick-link" href="https://www.youtube.com/@3blue1brown" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick editor" data-level="Beginner" data-text="professor leonard calculus full lectures long form patient">
+            <div class="pick-top"><span class="pick-channel">Professor Leonard</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">Full-length Calculus & Statistics lectures</div>
+            <div class="pick-why">Real, unedited classroom lectures that show every step of working a problem — closer to sitting in a great professor's class than a summary video.</div>
+            <div class="pick-tags">#calculus #statistics #step-by-step</div>
+            <a class="pick-link" href="https://www.youtube.com/@ProfessorLeonard" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Beginner" data-text="khan academy maths practice exercises fundamentals">
+            <div class="pick-top"><span class="pick-channel">Khan Academy</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">Structured maths playlists, any level</div>
+            <div class="pick-why">Short, focused videos organized like a syllabus, so you can jump straight to the exact sub-topic you're stuck on.</div>
+            <div class="pick-tags">#algebra #calculus #statistics #short-form</div>
+            <a class="pick-link" href="https://www.youtube.com/@khanacademy" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="category" id="science" data-name="Science & General">
+        <div class="category-head">
+          <h2>Science & General Studies</h2>
+          <span class="tag-line">outside the CS syllabus, still worth your time</span>
+        </div>
+        <div class="grid">
+
+          <article class="pick editor" data-level="Beginner" data-text="crash course history biology chemistry economics fast overview">
+            <div class="pick-top"><span class="pick-channel">CrashCourse</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">Fast, engaging overviews across subjects</div>
+            <div class="pick-why">Great for building the big picture of a subject quickly before you dive into detail — history, biology, economics, and more.</div>
+            <div class="pick-tags">#overview #biology #history #economics</div>
+            <a class="pick-link" href="https://www.youtube.com/@crashcourse" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Intermediate" data-text="veritasium physics science curiosity why explanations">
+            <div class="pick-top"><span class="pick-channel">Veritasium</span><span class="pick-level">Intermediate</span></div>
+            <div class="pick-title">Physics and science concepts explained well</div>
+            <div class="pick-why">Goes after the specific misconception most people have about a topic, which makes it stick better than a straight lecture.</div>
+            <div class="pick-tags">#physics #science #concepts</div>
+            <a class="pick-link" href="https://www.youtube.com/@veritasium" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Beginner" data-text="ted ed short animated explainers general knowledge">
+            <div class="pick-top"><span class="pick-channel">TED-Ed</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">Short animated explainers</div>
+            <div class="pick-why">Five minutes, one idea, well animated — good for general-knowledge topics that don't need a full lecture.</div>
+            <div class="pick-tags">#general-knowledge #animated #short</div>
+            <a class="pick-link" href="https://www.youtube.com/@TEDEd" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="category" id="exam" data-name="Exam Crash Courses">
+        <div class="category-head">
+          <h2>Exam Crash Courses</h2>
+          <span class="tag-line">for the week before the exam, not the week you learn it</span>
+        </div>
+        <div class="grid">
+
+          <article class="pick editor" data-level="Intermediate" data-text="gate smashers exam revision one shot semester">
+            <div class="pick-top"><span class="pick-channel">Gate Smashers</span><span class="pick-level">Intermediate</span></div>
+            <div class="pick-title">"One-shot" revision videos</div>
+            <div class="pick-why">Condenses a full semester's topic into one sitting — use it to revise, not to learn something for the first time.</div>
+            <div class="pick-tags">#revision #one-shot #semester-exam</div>
+            <a class="pick-link" href="https://www.youtube.com/@GateSmashers" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Beginner" data-text="khan academy quick review practice problems exam">
+            <div class="pick-top"><span class="pick-channel">Khan Academy</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">Topic-by-topic quick review</div>
+            <div class="pick-why">Short enough to slot between other revision, and organized so you can skip straight to your weak topic.</div>
+            <div class="pick-tags">#quick-review #practice</div>
+            <a class="pick-link" href="https://www.youtube.com/@khanacademy" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="category" id="skills" data-name="Communication & Career">
+        <div class="category-head">
+          <h2>Communication & Career</h2>
+          <span class="tag-line">the syllabus doesn't cover this, but interviews do</span>
+        </div>
+        <div class="grid">
+
+          <article class="pick" data-level="Beginner" data-text="apna college interview prep resume soft skills placement">
+            <div class="pick-top"><span class="pick-channel">Apna College</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">Resume building and interview prep</div>
+            <div class="pick-why">Aimed specifically at Indian college students heading into placements, so the advice matches what you'll actually face.</div>
+            <div class="pick-tags">#resume #interviews #placements</div>
+            <a class="pick-link" href="https://www.youtube.com/@ApnaCollegeOfficial" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+          <article class="pick" data-level="Beginner" data-text="ted ed communication skills public speaking clarity">
+            <div class="pick-top"><span class="pick-channel">TED-Ed</span><span class="pick-level">Beginner</span></div>
+            <div class="pick-title">How to structure a clear explanation</div>
+            <div class="pick-why">Watching well-built short talks trains the same skill you need for presentations and viva exams.</div>
+            <div class="pick-tags">#presentation #clarity #viva</div>
+            <a class="pick-link" href="https://www.youtube.com/@TEDEd" target="_blank" rel="noopener">Watch on YouTube</a>
+          </article>
+
+        </div>
+      </section>
+
+    </div>
+
+    <div class="empty-state" id="emptyState">
+      <h3>Nothing matches that search</h3>
+      <p>Try a broader term, or clear the search box to see the full shelf.</p>
+    </div>
+
+    <footer>
+      Built as a starting shelf, not a finished list — channels get better or worse over time, so treat this as a first stop and keep an eye out for what works for you specifically.
+    </footer>
+  </main>
+
+</div>
+
+<script>
+  const searchBox = document.getElementById('searchBox');
+  const resultCount = document.getElementById('resultCount');
+  const emptyState = document.getElementById('emptyState');
+  const results = document.getElementById('results');
+  const chips = document.querySelectorAll('#levelChips .chip');
+  let activeLevel = 'all';
+
+  function applyFilter(){
+    const q = searchBox.value.trim().toLowerCase();
+    const cards = document.querySelectorAll('.pick');
+    let visibleCount = 0;
+
+    document.querySelectorAll('.category').forEach(cat => {
+      let anyVisibleInCat = false;
+      cat.querySelectorAll('.pick').forEach(card => {
+        const text = card.getAttribute('data-text') + ' ' + card.querySelector('.pick-channel').textContent.toLowerCase();
+        const level = card.getAttribute('data-level');
+        const matchesText = q === '' || text.toLowerCase().includes(q);
+        const matchesLevel = activeLevel === 'all' || level === activeLevel;
+        const show = matchesText && matchesLevel;
+        card.style.display = show ? '' : 'none';
+        if(show){ anyVisibleInCat = true; visibleCount++; }
+      });
+      cat.style.display = anyVisibleInCat ? '' : 'none';
+    });
+
+    resultCount.textContent = visibleCount + (visibleCount === 1 ? ' pick' : ' picks');
+    emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+    results.style.display = visibleCount === 0 ? 'none' : 'block';
+  }
+
+  searchBox.addEventListener('input', applyFilter);
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeLevel = chip.getAttribute('data-level');
+      applyFilter();
+    });
+  });
+
+  applyFilter();
+</script>
+
+</body>
+</html>
